@@ -5,8 +5,6 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -41,14 +39,14 @@ public class RequestHandler extends Thread {
 
                 Map<String, String> query = HttpRequestUtils.parseQueryString(queryString[1]);
 
-                log.debug(query.toString());
+                createUser(query);
+            } else {
+                Path path = Paths.get("./webapp" + requestParameter[1]);
+                byte[] body = Files.readAllBytes(path);
+                DataOutputStream dos = new DataOutputStream(out);
+                response200Header(dos, body.length);
+                responseBody(dos, body);
             }
-
-            Path path = Paths.get("./webapp" + requestParameter[1]);
-            byte[] body = Files.readAllBytes(path);
-            DataOutputStream dos = new DataOutputStream(out);
-            response200Header(dos, body.length);
-            responseBody(dos, body);
         } catch (IOException e) {
             log.error(e.getMessage());
         }
@@ -74,7 +72,7 @@ public class RequestHandler extends Thread {
         }
     }
 
-    private void createUser() {
+    private void createUser(Map<String, String> query) {
 
     }
 }

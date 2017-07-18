@@ -5,9 +5,13 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.HttpRequestUtils;
 
 public class RequestHandler extends Thread {
     private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
@@ -27,23 +31,24 @@ public class RequestHandler extends Thread {
         try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
             // TODO 사용자 요청에 대한 처리는 이 곳에 구현하면 된다.
 
-            while(true) {
-                int count = in.read();
-                if(count == -1 || count == '\n') {
-                    System.out.println(request.toString());
-                    break;
-                }
-                request.append((char) count);
+            BufferedReader br = new BufferedReader(new InputStreamReader(in));
+
+            String requestHeader = br.readLine();
+
+            String[] requestParameter = requestHeader.split(" ");
+            if(requestParameter[1].indexOf("?") != -1) {
+                String[] queryString = requestParameter[1].split("\\?");
+
+                Map<String, String> query = HttpRequestUtils.parseQueryString(queryString[1]);
+
+                log.debug(query.toString());
             }
 
-            String[] requestParameter = request.toString().split(" ");
-            DataOutputStream dos = new DataOutputStream(out);
-
             Path path = Paths.get("./webapp" + requestParameter[1]);
-            byte[] asdf = Files.readAllBytes(path);
-
-            response200Header(dos, asdf.length);
-            responseBody(dos, asdf);
+            byte[] body = Files.readAllBytes(path);
+            DataOutputStream dos = new DataOutputStream(out);
+            response200Header(dos, body.length);
+            responseBody(dos, body);
         } catch (IOException e) {
             log.error(e.getMessage());
         }
@@ -67,5 +72,9 @@ public class RequestHandler extends Thread {
         } catch (IOException e) {
             log.error(e.getMessage());
         }
+    }
+
+    private void createUser() {
+
     }
 }

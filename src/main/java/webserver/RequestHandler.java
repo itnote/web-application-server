@@ -2,6 +2,9 @@ package webserver;
 
 import java.io.*;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,21 +37,13 @@ public class RequestHandler extends Thread {
             }
 
             String[] requestParameter = request.toString().split(" ");
-            InputStream fis = new FileInputStream("./webapp" + requestParameter[1]);
             DataOutputStream dos = new DataOutputStream(out);
 
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            Path path = Paths.get("./webapp" + requestParameter[1]);
+            byte[] asdf = Files.readAllBytes(path);
 
-            byte[] b = new byte[1024 * 8];
-            int readcount = 0;
-
-            while((readcount = fis.read(b)) != -1) {
-                baos.write(b, 0, readcount);
-            }
-
-            byte[] response = baos.toByteArray();
-            response200Header(dos, response.length);
-            responseBody(dos, response);
+            response200Header(dos, asdf.length);
+            responseBody(dos, asdf);
         } catch (IOException e) {
             log.error(e.getMessage());
         }

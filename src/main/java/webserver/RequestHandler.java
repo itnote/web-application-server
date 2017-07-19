@@ -51,9 +51,7 @@ public class RequestHandler extends Thread {
             if(headerList.containsKey("Content-Length")) {
                 requestBody = IOUtils.readData(br, Integer.parseInt(headerList.get("Content-Length")));
             }
-            if(headerList.containsKey("Set-Cookie")) {
-                log.debug(headerList.get("Set-Cookie"));
-            }
+            log.debug(headerList.toString());
 
             DataOutputStream dos = new DataOutputStream(out);
             if(!requestBody.equals("")) {
@@ -64,22 +62,17 @@ public class RequestHandler extends Thread {
                     } else {
                         log.debug("user 등록 실패거나 이미 아이디가 존재함");
                     }
-                    response302(dos, "../index.html");
+                    response302(dos, "http://localhost:8080/index.html");
                 } else if(requestParameter[1].contains("login")) {
                     boolean isLogin = loginUser(query);
                     if(isLogin) {
-                        Path path = Paths.get("./webapp/index.html");
-                        byte[] body = Files.readAllBytes(path);
-                        response200HeaderWithCookie(dos, body.length, "logined=true");
-                        responseBody(dos, body);
+                        response302HeaderWithCookie(dos, "http://localhost:8080/index.html", "logined=true");
                     } else {
-                        Path path = Paths.get("./webapp/user/login_failed.html");
-                        byte[] body = Files.readAllBytes(path);
-                        response200HeaderWithCookie(dos, body.length, "logined=false");
-                        responseBody(dos, body);
+                        response302HeaderWithCookie(dos, "http://localhost:8080/user/login_failed.html", "logined=false");
                     }
                 }
             } else {
+                log.debug(requestParameter[1]);
                 Path path = Paths.get("./webapp" + requestParameter[1]);
                 byte[] body = Files.readAllBytes(path);
                 response200Header(dos, body.length);
@@ -101,22 +94,22 @@ public class RequestHandler extends Thread {
         }
     }
 
-    private void response200HeaderWithCookie(DataOutputStream dos, int lengthOfBodyContent, String valueOfCookie) {
+    private void response302(DataOutputStream dos, String urlOfLocation) {
         try {
-            dos.writeBytes("HTTP/1.1 200 OK \r\n");
-            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
-            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
-            dos.writeBytes("Set-Cookie: " + valueOfCookie + "\r\n");
+            dos.writeBytes("HTTP/1.1 302 Found \r\n");
+            dos.writeBytes("Location: " + urlOfLocation + "\r\n");
             dos.writeBytes("\r\n");
+            dos.flush();
         } catch (IOException e) {
             log.error(e.getMessage());
         }
     }
 
-    private void response302(DataOutputStream dos, String urlOfLocation) {
+    private void response302HeaderWithCookie(DataOutputStream dos, String urlOfLocation, String valueOfCookie) {
         try {
             dos.writeBytes("HTTP/1.1 302 Found \r\n");
             dos.writeBytes("Location: " + urlOfLocation + "\r\n");
+            dos.writeBytes("Set-Cookie: " + valueOfCookie + "\r\n");
             dos.writeBytes("\r\n");
             dos.flush();
         } catch (IOException e) {

@@ -47,27 +47,41 @@ public class RequestHandler extends Thread {
                 line = br.readLine();
             }
 
-            log.debug(headerList.toString());
             String requestBody = "";
             if(headerList.containsKey("Content-Length")) {
                 requestBody = IOUtils.readData(br, Integer.parseInt(headerList.get("Content-Length")));
-                log.debug(requestBody);
+            }
+            if(headerList.containsKey("Set-Cookie")) {
+                log.debug(headerList.get("Set-Cookie"));
             }
 
+            DataOutputStream dos = new DataOutputStream(out);
             if(!requestBody.equals("")) {
                 Map<String, String> query = HttpRequestUtils.parseQueryString(requestBody);
-
-                if(DataBase.findUserById(query.get("userId")) == null && createUser(query)) {
-                    log.debug(DataBase.findUserById(query.get("userId")).toString());
-                } else {
-                    log.debug("user 등록 실패거나 이미 아이디가 존재함");
+                if(requestParameter[1].contains("create")) {
+                    if (DataBase.findUserById(query.get("userId")) == null && createUser(query)) {
+                        log.debug(DataBase.findUserById(query.get("userId")).toString());
+                    } else {
+                        log.debug("user 등록 실패거나 이미 아이디가 존재함");
+                    }
+                    response302(dos, "../index.html");
+                } else if(requestParameter[1].contains("login")) {
+                    boolean isLogin = loginUser(query);
+                    if(isLogin) {
+                        Path path = Paths.get("./webapp/index.html");
+                        byte[] body = Files.readAllBytes(path);
+                        response200HeaderWithCookie(dos, body.length, "logined=true");
+                        responseBody(dos, body);
+                    } else {
+                        Path path = Paths.get("./webapp/user/login_failed.html");
+                        byte[] body = Files.readAllBytes(path);
+                        response200HeaderWithCookie(dos, body.length, "logined=false");
+                        responseBody(dos, body);
+                    }
                 }
-                DataOutputStream dos = new DataOutputStream(out);
-                response302(dos, "../index.html");
             } else {
                 Path path = Paths.get("./webapp" + requestParameter[1]);
                 byte[] body = Files.readAllBytes(path);
-                DataOutputStream dos = new DataOutputStream(out);
                 response200Header(dos, body.length);
                 responseBody(dos, body);
             }
@@ -81,6 +95,18 @@ public class RequestHandler extends Thread {
             dos.writeBytes("HTTP/1.1 200 OK \r\n");
             dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
+            dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    private void response200HeaderWithCookie(DataOutputStream dos, int lengthOfBodyContent, String valueOfCookie) {
+        try {
+            dos.writeBytes("HTTP/1.1 200 OK \r\n");
+            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
+            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
+            dos.writeBytes("Set-Cookie: " + valueOfCookie + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.error(e.getMessage());
@@ -121,5 +147,16 @@ public class RequestHandler extends Thread {
         } else {
             return false;
         }
+    }
+
+    private boolean loginUser(Map<String, String> query) {
+        String userId = query.get("userId");
+        String password = query.get("password");
+        User user = DataBase.findUserById(userId);
+        if(user != null && user.getPassword().equals(password)) {
+            return true;
+        }
+
+        return false;
     }
 }

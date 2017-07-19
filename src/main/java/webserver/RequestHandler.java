@@ -62,6 +62,8 @@ public class RequestHandler extends Thread {
                 } else {
                     log.debug("user 등록 실패거나 이미 아이디가 존재함");
                 }
+                DataOutputStream dos = new DataOutputStream(out);
+                response302(dos, "../index.html");
             } else {
                 Path path = Paths.get("./webapp" + requestParameter[1]);
                 byte[] body = Files.readAllBytes(path);
@@ -80,6 +82,17 @@ public class RequestHandler extends Thread {
             dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    private void response302(DataOutputStream dos, String urlOfLocation) {
+        try {
+            dos.writeBytes("HTTP/1.1 302 Found \r\n");
+            dos.writeBytes("Location: " + urlOfLocation + "\r\n");
+            dos.writeBytes("\r\n");
+            dos.flush();
         } catch (IOException e) {
             log.error(e.getMessage());
         }

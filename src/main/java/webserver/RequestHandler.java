@@ -62,13 +62,13 @@ public class RequestHandler extends Thread {
                     } else {
                         log.debug("user 등록 실패거나 이미 아이디가 존재함");
                     }
-                    response302(dos, "http://localhost:8080/index.html");
+                    response302(dos, "/index.html");
                 } else if(requestParameter[1].contains("login")) {
                     boolean isLogin = loginUser(query);
                     if(isLogin) {
-                        response302HeaderWithCookie(dos, "http://localhost:8080/index.html", "logined=true");
+                        response302HeaderWithCookie(dos, "/index.html", "logined=true");
                     } else {
-                        response302HeaderWithCookie(dos, "http://localhost:8080/user/login_failed.html", "logined=false");
+                        response302HeaderWithCookie(dos, "/user/login_failed.html", "logined=false");
                     }
                 }
             } else {

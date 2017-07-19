@@ -7,6 +7,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 
+import db.DataBase;
+import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.HttpRequestUtils;
@@ -34,12 +36,16 @@ public class RequestHandler extends Thread {
             String requestHeader = br.readLine();
 
             String[] requestParameter = requestHeader.split(" ");
-            if(requestParameter[1].indexOf("?") != -1) {
+            if(requestParameter[1].contains("?")) {
                 String[] queryString = requestParameter[1].split("\\?");
 
                 Map<String, String> query = HttpRequestUtils.parseQueryString(queryString[1]);
 
-                createUser(query);
+                if(DataBase.findUserById(query.get("userId")) == null && createUser(query)) {
+                    log.debug(DataBase.findUserById(query.get("userId")).toString());
+                } else {
+                    log.debug("user 등록 실패거나 이미 아이디가 존재함");
+                }
             } else {
                 Path path = Paths.get("./webapp" + requestParameter[1]);
                 byte[] body = Files.readAllBytes(path);
@@ -72,7 +78,19 @@ public class RequestHandler extends Thread {
         }
     }
 
-    private void createUser(Map<String, String> query) {
+    private boolean createUser(Map<String, String> query) {
+        String userId = query.get("userId");
+        String password = query.get("password");
+        String name = query.get("name");
+        String email = query.get("email");
 
+        if(!userId.isEmpty() && !password.isEmpty() && !name.isEmpty() && !email.isEmpty()) {
+            User user = new User(userId, password, name, email);
+            DataBase.addUser(user);
+            log.debug(String.valueOf(user.hashCode()));
+            return true;
+        } else {
+            return false;
+        }
     }
 }

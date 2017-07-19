@@ -5,8 +5,7 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import db.DataBase;
 import model.User;
@@ -54,16 +53,17 @@ public class RequestHandler extends Thread {
             log.debug(headerList.toString());
 
             DataOutputStream dos = new DataOutputStream(out);
+            String param = requestParameter[1];
             if(!requestBody.equals("")) {
                 Map<String, String> query = HttpRequestUtils.parseQueryString(requestBody);
-                if(requestParameter[1].contains("create")) {
+                if(param.contains("create")) {
                     if (DataBase.findUserById(query.get("userId")) == null && createUser(query)) {
                         log.debug(DataBase.findUserById(query.get("userId")).toString());
                     } else {
                         log.debug("user 등록 실패거나 이미 아이디가 존재함");
                     }
                     response302(dos, "/index.html");
-                } else if(requestParameter[1].contains("login")) {
+                } else if(param.contains("login")) {
                     boolean isLogin = loginUser(query);
                     if(isLogin) {
                         response302HeaderWithCookie(dos, "/index.html", "logined=true");
@@ -72,11 +72,20 @@ public class RequestHandler extends Thread {
                     }
                 }
             } else {
-                log.debug(requestParameter[1]);
-                Path path = Paths.get("./webapp" + requestParameter[1]);
-                byte[] body = Files.readAllBytes(path);
-                response200Header(dos, body.length);
-                responseBody(dos, body);
+                if(param.contains("list")) {
+                    boolean isLogin = checkLogin(headerList.get("Cookie"));
+                    if(isLogin) {
+                        String contentOfListPage = createUserListPage();
+                        byte[] body = contentOfListPage.getBytes();
+                        response200Header(dos, body.length);
+                        responseBody(dos, body);
+                    } else {
+                        response302(dos, "/user/login.html");
+                    }
+                } else {
+                    log.debug(requestParameter[1]);
+                    response200(dos, requestParameter[1]);
+                }
             }
         } catch (IOException e) {
             log.error(e.getMessage());
@@ -89,6 +98,17 @@ public class RequestHandler extends Thread {
             dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    private void response200(DataOutputStream dos, String stringOfPath) {
+        try {
+            Path path = Paths.get("./webapp" + stringOfPath);
+            byte[] body = Files.readAllBytes(path);
+            response200Header(dos, body.length);
+            responseBody(dos, body);
         } catch (IOException e) {
             log.error(e.getMessage());
         }
@@ -151,5 +171,50 @@ public class RequestHandler extends Thread {
         }
 
         return false;
+    }
+
+    private boolean checkLogin(String valueOfCookie) {
+        Map<String, String> cookie = HttpRequestUtils.parseCookies(valueOfCookie);
+        return Boolean.parseBoolean(cookie.get("logined"));
+    }
+
+    private String createUserListPage() {
+        StringBuilder sb = new StringBuilder();
+        int i = 1;
+        sb.append("<!DOCTYPE html>\n" +
+                "<html lang=\"kr\">\n +" +
+                "<head>\n" +
+                "    <meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\">\n" +
+                "    <meta charset=\"utf-8\">\n" +
+                "    <title>SLiPP Java Web Programming</title>\n" +
+                "</head>\n" +
+                "<body>\n" +
+                "<table class=\"table table-hover\">\n" +
+                "              <thead>\n" +
+                "                <tr>\n" +
+                "                    <th>#</th> <th>사용자 아이디</th> <th>이름</th> <th>이메일</th><th></th>\n" +
+                "                </tr>\n" +
+                "              </thead>\n" +
+                "              <tbody>");
+
+        Iterator<User> iterator = DataBase.findAll().iterator();
+        while(iterator.hasNext()) {
+            User user = iterator.next();
+            sb.append("<tr>\n" +
+                    "<th scope='row'>" + i + "</th> ");
+            sb.append("<td>" + user.getUserId() + "</td> ");
+            sb.append("<td>" + user.getName() + "</td> ");
+            sb.append("<td>" + user.getEmail() + "</td>\n");
+            sb.append("</tr>");
+        }
+        sb.append("</tbody>\n" +
+                "</table>\n" +
+                "<script src=\"../js/jquery-2.2.0.min.js\"></script>\n" +
+                "<script src=\"../js/bootstrap.min.js\"></script>\n" +
+                "<script src=\"../js/scripts.js\"></script>\n" +
+                "\t</body>\n" +
+                "</html>");
+
+        return sb.toString();
     }
 }
